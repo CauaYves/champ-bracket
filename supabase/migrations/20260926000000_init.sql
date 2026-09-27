@@ -68,6 +68,12 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- Backfill accounts created before this migration.
+insert into public.profiles (id, full_name)
+select id, coalesce(raw_user_meta_data ->> 'full_name', '')
+from auth.users
+on conflict (id) do nothing;
+
 -- ---------------------------------------------------------------------------
 -- Presets (owner_id null = built-in)
 --

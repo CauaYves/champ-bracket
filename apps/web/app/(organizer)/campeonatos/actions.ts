@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import { z } from "zod"
 
 import { criteriaSchema } from "@/lib/criteria"
-import type { FormState } from "@/lib/form-state"
+import { errorMessage, type FormState } from "@/lib/form-state"
 import type { Enums } from "@/lib/supabase/database.types"
 import { createClient, getUserId } from "@/lib/supabase/server"
 
@@ -54,7 +54,10 @@ export async function createChampionship(
     .select("id")
     .single()
   if (error) {
-    return { error: "Não foi possível criar o campeonato." }
+    console.error("createChampionship", error)
+    return {
+      error: errorMessage("Não foi possível criar o campeonato.", error),
+    }
   }
 
   revalidatePath("/campeonatos")
@@ -93,7 +96,10 @@ export async function updateChampionshipStatus(
     .from("championships")
     .update({ status })
     .eq("id", championshipId)
-  if (error) throw new Error("Não foi possível atualizar o status")
+  if (error) {
+    console.error(error)
+    throw new Error("Não foi possível atualizar o status")
+  }
 
   revalidatePath(`/campeonatos/${championshipId}`)
 }
@@ -111,7 +117,10 @@ export async function setRegistrationStatus(
     .update({ status })
     .eq("id", registrationId)
     .eq("championship_id", championshipId)
-  if (error) throw new Error("Não foi possível atualizar a inscrição")
+  if (error) {
+    console.error(error)
+    throw new Error("Não foi possível atualizar a inscrição")
+  }
 
   revalidatePath(`/campeonatos/${championshipId}`)
 }

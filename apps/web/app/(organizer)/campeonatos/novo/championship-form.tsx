@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useActionState } from "react"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
@@ -109,7 +110,8 @@ export function ChampionshipForm({
                 ))}
               </NativeSelect>
               <FieldDescription>
-                Define as faixas e categorias de idade do campeonato.
+                Define as faixas e categorias de idade do campeonato.{" "}
+                <Link href="/modalidades">Gerenciar modalidades</Link>
               </FieldDescription>
               <FieldError errors={fieldError(state, "presetId")} />
             </Field>

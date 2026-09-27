@@ -40,6 +40,7 @@ import {
   registrationStatusLabel,
 } from "@/lib/labels"
 import type { Enums, Tables } from "@/lib/supabase/database.types"
+import { PageBreadcrumb } from "@/components/page-breadcrumb"
 import { createClient } from "@/lib/supabase/server"
 
 import { setRegistrationStatus, updateChampionshipStatus } from "../actions"
@@ -94,6 +95,10 @@ export default async function ChampionshipPage({
 
   return (
     <>
+      <PageBreadcrumb
+        items={[{ label: "Campeonatos", href: "/campeonatos" }]}
+        page={championship.name}
+      />
       <Card>
         <CardHeader>
           <CardTitle>{championship.name}</CardTitle>

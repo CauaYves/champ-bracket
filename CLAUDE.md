@@ -45,12 +45,15 @@ pnpm --filter @workspace/bracket-engine exec vitest run -t "cascades"   # single
 - Schema, RLS and RPCs live in `supabase/migrations/` (applied through the Supabase MCP server configured in `.mcp.json`). Env vars: see `apps/web/.env.example`.
 - Clients: `lib/supabase/server.ts` (`createClient()`, `getUserId()` for Server Components/Actions), `lib/supabase/client.ts` (browser), `lib/supabase/proxy.ts` (session refresh + redirect of unauthenticated `/campeonatos/*`, wired in `apps/web/proxy.ts`, which replaces Next's `middleware`).
 - `lib/supabase/database.types.ts` is the `Database` type; regenerate it after schema changes.
+- This Supabase project does **not** auto-grant new `public` tables to the API roles. Every new table needs explicit `grant ... to authenticated` in its migration (see `20260926010000_grants.sql`), in addition to RLS policies. "permission denied for table X" means a missing grant, not an RLS problem.
 - Organizers access their own rows via RLS (`owner_id = auth.uid()`). Public pages (`/c/[slug]`) and the QR registration form only use `security definer` RPCs, never direct table reads. Registration athlete data is immutable (DB trigger); only `status`/`division_id` change.
 - Server Actions re-check auth (`requireUser()`) and validate with zod; forms use `useActionState` with the `FormState` shape in `lib/form-state.ts`.
 
 ### UI rule
 
-Use stock shadcn components only. Don't edit `packages/ui/src/components/*`, and don't add custom colors, typography or decorative classes. `className` is for layout only (flex/grid/gap/padding/width). UI copy is pt-BR.
+Use stock shadcn components only. **Before building any UI piece, check the registry** (`pnpm dlx shadcn@latest list @shadcn -c apps/web` / `search`). If a component exists, install it and use it instead of raw markup. Examples: `Empty` for empty and success states, `Item` for list rows, `InputGroup` for input + button, `toast` (Base UI) for feedback, `Breadcrumb` via `components/page-breadcrumb.tsx`. Don't edit `packages/ui/src/components/*`, and don't add custom colors, typography or decorative classes. `className` is for layout only (flex/grid/gap/padding/width). UI copy is pt-BR. The only non-shadcn UI is the QR code (`qrcode.react`), because the registry has none.
+
+Organizer routes live in the `app/(organizer)/` route group (shared nav layout). Add new protected prefixes to `PROTECTED_PREFIXES` in `lib/supabase/proxy.ts`.
 
 ### shadcn/ui setup
 

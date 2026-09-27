@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import type { Database } from "./database.types"
 
-const PROTECTED_PREFIXES = ["/campeonatos"]
+const PROTECTED_PREFIXES = ["/campeonatos", "/modalidades"]
 
 /** Refreshes the auth session cookie and guards organizer routes. */
 export async function updateSession(request: NextRequest) {

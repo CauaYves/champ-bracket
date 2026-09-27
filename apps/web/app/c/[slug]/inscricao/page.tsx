@@ -1,12 +1,14 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@workspace/ui/components/empty"
 
 import { getPublicChampionship } from "../data"
 import { RegistrationForm } from "./registration-form"
@@ -20,21 +22,23 @@ export default async function RegistrationPage({
 
   if (championship.status !== "registration_open") {
     return (
-      <Alert>
-        <AlertTitle>Inscrições encerradas</AlertTitle>
-        <AlertDescription>
-          <p>
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Inscrições encerradas</EmptyTitle>
+          <EmptyDescription>
             As inscrições para {championship.name} não estão abertas no momento.
-          </p>
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
           <Button
-            variant="link"
+            variant="outline"
             render={<Link href={`/c/${slug}`} />}
             nativeButton={false}
           >
             Ver campeonato
           </Button>
-        </AlertDescription>
-      </Alert>
+        </EmptyContent>
+      </Empty>
     )
   }
 

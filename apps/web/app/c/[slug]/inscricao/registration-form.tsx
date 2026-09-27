@@ -1,14 +1,11 @@
 "use client"
 
+import { CircleCheckIcon } from "lucide-react"
 import Link from "next/link"
 import { startTransition, useActionState, useState } from "react"
 
 import { isMinor } from "@workspace/bracket-engine"
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@workspace/ui/components/alert"
+import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -18,6 +15,14 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card"
 import { Checkbox } from "@workspace/ui/components/checkbox"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@workspace/ui/components/empty"
 import {
   Field,
   FieldContent,
@@ -69,22 +74,27 @@ export function RegistrationForm({
 
   if (state.success) {
     return (
-      <Alert>
-        <AlertTitle>Inscrição enviada!</AlertTitle>
-        <AlertDescription>
-          <p>
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <CircleCheckIcon />
+          </EmptyMedia>
+          <EmptyTitle>Inscrição enviada!</EmptyTitle>
+          <EmptyDescription>
             Sua inscrição em {championshipName} foi recebida e está aguardando a
             aprovação do organizador.
-          </p>
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
           <Button
-            variant="link"
+            variant="outline"
             render={<Link href={`/c/${slug}`} />}
             nativeButton={false}
           >
             Ver campeonato
           </Button>
-        </AlertDescription>
-      </Alert>
+        </EmptyContent>
+      </Empty>
     )
   }
 
