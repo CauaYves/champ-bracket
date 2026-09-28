@@ -31,3 +31,10 @@ const dateFormat = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" })
 export function formatDate(date: string) {
   return dateFormat.format(new Date(`${date}T00:00:00Z`))
 }
+
+export const divisionStatusLabel: Record<Enums<"division_status">, string> = {
+  draft: "Montagem",
+  locked: "Travada",
+  in_progress: "Em andamento",
+  finished: "Finalizada",
+}

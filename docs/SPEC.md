@@ -95,7 +95,9 @@ Schema: `supabase/migrations/`.
 - **Age**: by **birth year**. Age = championship year − birth year.
 - **Athlete data is frozen per championship**: registration data (weight, belt, age, …) is a snapshot owned by the championship. Once brackets exist it does not change. There is no reclassification or weigh-in flow.
 - **Undo**: a result can always be changed, even after later matches were decided. Changing a winner **cascades**: every downstream match the old winner reached is cleared back to that point, after the organizer confirms which results will be lost.
-- **Single-athlete divisions**: the athlete **waits to be paired**, and the division stays open (not auto-gold). *To confirm: paired with whom? Late registrations, or a merge into a neighboring division?*
+- **Single-athlete divisions**: the athlete **waits to be paired**, and the division stays open (not auto-gold). The division page shows "Aguardando adversário" and can't be drawn until the organizer moves an athlete in from another division, or a late registration is approved and assigned.
+- **Auto-grouping** (`groupAthletes` in the engine): by gender + age category (birth year) + belt. Weight is **not** grouped yet. The organizer splits by weight by creating manual divisions and moving athletes. Auto divisions are identified by `divisions.group_key`, so "Gerar divisões" only places athletes not yet in a division and never touches divisions whose bracket is drawn.
+- **Division lifecycle**: `draft` (athletes can move; bracket can be drawn, redrawn, rearranged by drag & drop or "Trocar", or discarded) → "Iniciar lutas" → `in_progress` (record winners, undo with cascade confirmation) → `finished` automatically when the final has a winner (back to `in_progress` if a result is undone). Public pages show only divisions past `draft`, refreshing every 15 s while the championship is `in_progress`.
 - **LGPD**: the form requires a consent checkbox (with a link to the privacy notice). For minors, the guardian's name, phone, and a guardian consent checkbox are mandatory. Consent is stored with a timestamp.
 
 ## Out of scope

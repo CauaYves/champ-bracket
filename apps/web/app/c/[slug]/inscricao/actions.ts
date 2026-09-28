@@ -2,25 +2,47 @@
 
 import { z } from "zod"
 
+import { digitsOnly, parseDecimal } from "@/lib/format"
 import type { FormState } from "@/lib/form-state"
 import { createClient } from "@/lib/supabase/server"
+
+/** Stored as digits only (DDD + number); formatted when displayed. */
+const phone = (message: string) =>
+  z
+    .string()
+    .transform(digitsOnly)
+    .pipe(z.string().regex(/^\d{10,11}$/, message))
 
 const registrationSchema = z.object({
   fullName: z.string().trim().min(3, "Informe o nome completo"),
   birthDate: z.iso.date("Informe a data de nascimento"),
   gender: z.enum(["male", "female"], "Selecione o sexo"),
-  weightKg: z.coerce
-    .number("Informe o peso")
-    .positive("Informe o peso")
-    .max(400, "Peso inválido"),
+  weightKg: z
+    .string()
+    .transform(parseDecimal)
+    .pipe(
+      z
+        .number("Informe o peso")
+        .positive("Informe o peso")
+        .max(400, "Peso inválido")
+    ),
   belt: z.string().min(1, "Selecione a faixa"),
   academy: z.string().trim().min(2, "Informe a academia ou equipe"),
   coach: z.string().trim().default(""),
-  phone: z.string().trim().min(8, "Informe um telefone válido"),
+  phone: phone("Informe o telefone com DDD"),
   email: z.email("Informe um e-mail válido"),
   consent: z.literal("on", "É necessário aceitar para se inscrever"),
   guardianName: z.string().trim().optional(),
-  guardianPhone: z.string().trim().optional(),
+  guardianPhone: z
+    .string()
+    .optional()
+    .transform((value) => (value ? digitsOnly(value) : undefined))
+    .pipe(
+      z
+        .string()
+        .regex(/^\d{10,11}$/, "Informe o telefone do responsável com DDD")
+        .optional()
+    ),
   guardianConsent: z.literal("on").optional(),
 })
 

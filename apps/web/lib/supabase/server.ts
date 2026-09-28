@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 
 import type { Database } from "./database.types"
 
@@ -35,4 +36,11 @@ export async function getUserId() {
   const supabase = await createClient()
   const { data } = await supabase.auth.getClaims()
   return data?.claims.sub ?? null
+}
+
+/** For Server Actions: the signed-in user id, or a redirect to sign-in. */
+export async function requireUser() {
+  const userId = await getUserId()
+  if (!userId) redirect("/entrar")
+  return userId
 }

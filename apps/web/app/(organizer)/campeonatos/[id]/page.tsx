@@ -41,9 +41,11 @@ import {
 } from "@/lib/labels"
 import type { Enums, Tables } from "@/lib/supabase/database.types"
 import { PageBreadcrumb } from "@/components/page-breadcrumb"
+import { formatPhone, formatWeight } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
 
 import { setRegistrationStatus, updateChampionshipStatus } from "../actions"
+import { DivisionsCard } from "./divisions-card"
 import { ShareCard } from "./share-card"
 
 type RegistrationStatus = Enums<"registration_status">
@@ -75,14 +77,20 @@ export default async function ChampionshipPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: championship }, { data: registrations }] = await Promise.all([
-    supabase.from("championships").select("*").eq("id", id).maybeSingle(),
-    supabase
-      .from("registrations")
-      .select("*")
-      .eq("championship_id", id)
-      .order("created_at"),
-  ])
+  const [{ data: championship }, { data: registrations }, { data: divisions }] =
+    await Promise.all([
+      supabase.from("championships").select("*").eq("id", id).maybeSingle(),
+      supabase
+        .from("registrations")
+        .select("*")
+        .eq("championship_id", id)
+        .order("created_at"),
+      supabase
+        .from("divisions")
+        .select("id, name, status")
+        .eq("championship_id", id)
+        .order("name"),
+    ])
   if (!championship) notFound()
 
   const origin = await getOrigin()
@@ -132,6 +140,13 @@ export default async function ChampionshipPage({
           publicUrl={publicUrl}
         />
       )}
+
+      <DivisionsCard
+        championshipId={championship.id}
+        championshipStatus={championship.status}
+        divisions={divisions ?? []}
+        approved={byStatus("approved")}
+      />
 
       <Card>
         <CardHeader>
@@ -212,13 +227,18 @@ function RegistrationsTable({
               {competitionAge(registration.birth_date, eventYear)}
             </TableCell>
             <TableCell>{genderLabel[registration.gender]}</TableCell>
-            <TableCell>{registration.weight_kg} kg</TableCell>
+            <TableCell>{formatWeight(registration.weight_kg)}</TableCell>
             <TableCell>{registration.belt}</TableCell>
             <TableCell>{registration.academy}</TableCell>
             <TableCell>
-              {registration.phone}
+              {formatPhone(registration.phone)}
               {registration.guardian_name && (
-                <> · Resp.: {registration.guardian_name}</>
+                <>
+                  {" "}
+                  · Resp.: {registration.guardian_name}
+                  {registration.guardian_phone &&
+                    ` ${formatPhone(registration.guardian_phone)}`}
+                </>
               )}
             </TableCell>
             <TableCell>

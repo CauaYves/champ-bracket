@@ -45,6 +45,7 @@ import {
 } from "@workspace/ui/components/radio-group"
 import { Spinner } from "@workspace/ui/components/spinner"
 
+import { DecimalInput, PhoneInput } from "@/components/formatted-inputs"
 import { fieldError, type FormState } from "@/lib/form-state"
 import { genderLabel } from "@/lib/labels"
 
@@ -168,15 +169,12 @@ export function RegistrationForm({
                   <FieldError errors={fieldError(state, "gender")} />
                 </FieldSet>
                 <Field data-invalid={invalid("weightKg")}>
-                  <FieldLabel htmlFor="weightKg">Peso (kg)</FieldLabel>
-                  <Input
+                  <FieldLabel htmlFor="weightKg">Peso</FieldLabel>
+                  <DecimalInput
                     id="weightKg"
                     name="weightKg"
-                    type="number"
-                    inputMode="decimal"
-                    step="0.1"
-                    min="1"
-                    max="400"
+                    unit="kg"
+                    placeholder="72,5"
                     required
                     aria-invalid={invalid("weightKg")}
                   />
@@ -226,11 +224,9 @@ export function RegistrationForm({
                 </Field>
                 <Field data-invalid={invalid("phone")}>
                   <FieldLabel htmlFor="phone">Telefone (WhatsApp)</FieldLabel>
-                  <Input
+                  <PhoneInput
                     id="phone"
                     name="phone"
-                    type="tel"
-                    autoComplete="tel"
                     required
                     aria-invalid={invalid("phone")}
                   />
@@ -267,16 +263,18 @@ export function RegistrationForm({
                       </FieldLabel>
                       <Input id="guardianName" name="guardianName" required />
                     </Field>
-                    <Field>
+                    <Field data-invalid={invalid("guardianPhone")}>
                       <FieldLabel htmlFor="guardianPhone">
                         Telefone do responsável
                       </FieldLabel>
-                      <Input
+                      <PhoneInput
                         id="guardianPhone"
                         name="guardianPhone"
-                        type="tel"
+                        autoComplete="off"
                         required
+                        aria-invalid={invalid("guardianPhone")}
                       />
+                      <FieldError errors={fieldError(state, "guardianPhone")} />
                     </Field>
                     <Field orientation="horizontal">
                       <Checkbox

@@ -15,3 +15,12 @@ export {
   type CreateSingleEliminationOptions,
   type ResultChange,
 } from "./single-elimination"
+export {
+  findAgeCategory,
+  groupAthletes,
+  type AgeCategory,
+  type DivisionGroup,
+  type Gender,
+  type GroupingAthlete,
+  type GroupingCriteria,
+} from "./grouping"

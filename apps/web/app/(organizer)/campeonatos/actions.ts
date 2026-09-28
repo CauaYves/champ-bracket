@@ -7,13 +7,7 @@ import { z } from "zod"
 import { criteriaSchema } from "@/lib/criteria"
 import { errorMessage, type FormState } from "@/lib/form-state"
 import type { Enums } from "@/lib/supabase/database.types"
-import { createClient, getUserId } from "@/lib/supabase/server"
-
-async function requireUser() {
-  const userId = await getUserId()
-  if (!userId) redirect("/entrar")
-  return userId
-}
+import { createClient, requireUser } from "@/lib/supabase/server"
 
 const championshipSchema = z.object({
   name: z.string().trim().min(3, "Informe o nome do campeonato"),
@@ -112,9 +106,21 @@ export async function setRegistrationStatus(
   await requireUser()
   const supabase = await createClient()
 
+  if (status !== "approved") {
+    const { data: registration } = await supabase
+      .from("registrations")
+      .select("divisions(bracket)")
+      .eq("id", registrationId)
+      .single()
+    if (registration?.divisions?.bracket) {
+      throw new Error("O atleta já está em uma chave sorteada")
+    }
+  }
+
   const { error } = await supabase
     .from("registrations")
-    .update({ status })
+    // Only approved athletes stay in divisions.
+    .update(status === "approved" ? { status } : { status, division_id: null })
     .eq("id", registrationId)
     .eq("championship_id", championshipId)
   if (error) {

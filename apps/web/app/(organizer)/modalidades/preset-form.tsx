@@ -22,10 +22,18 @@ import {
   FieldSet,
 } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@workspace/ui/components/input-group"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { Textarea } from "@workspace/ui/components/textarea"
 
+import { DecimalInput } from "@/components/formatted-inputs"
 import type { Criteria } from "@/lib/criteria"
+import { formatDecimalInput } from "@/lib/format"
 import { fieldError, type FormState } from "@/lib/form-state"
 
 import { savePreset } from "./actions"
@@ -38,6 +46,11 @@ type CategoryRow = {
 }
 
 let nextKey = 0
+
+/** Whole ages, up to 2 digits. */
+function ageDigits(value: string) {
+  return formatDecimalInput(value, { decimals: 0, integerDigits: 2 })
+}
 
 function toRows(criteria: Criteria): CategoryRow[] {
   return criteria.ageCategories.map((category) => ({
@@ -108,13 +121,13 @@ export function PresetForm({
             </Field>
             <Field data-invalid={invalid("adultAge")}>
               <FieldLabel htmlFor="adultAge">Maioridade</FieldLabel>
-              <Input
+              <DecimalInput
                 id="adultAge"
                 name="adultAge"
-                type="number"
-                min={1}
-                max={99}
-                defaultValue={criteria.adultAge}
+                unit="anos"
+                decimals={0}
+                integerDigits={2}
+                defaultValue={String(criteria.adultAge)}
                 required
                 aria-invalid={invalid("adultAge")}
               />
@@ -164,29 +177,41 @@ export function PresetForm({
                       }
                       required
                     />
-                    <Input
-                      name="categoryMin"
-                      type="number"
-                      min={0}
-                      placeholder="Mín."
-                      aria-label={`Idade mínima da categoria ${index + 1}`}
-                      value={row.minAge}
-                      onChange={(e) =>
-                        updateRow(row.key, { minAge: e.target.value })
-                      }
-                      required
-                    />
-                    <Input
-                      name="categoryMax"
-                      type="number"
-                      min={0}
-                      placeholder="Máx."
-                      aria-label={`Idade máxima da categoria ${index + 1}`}
-                      value={row.maxAge}
-                      onChange={(e) =>
-                        updateRow(row.key, { maxAge: e.target.value })
-                      }
-                    />
+                    <InputGroup>
+                      <InputGroupInput
+                        name="categoryMin"
+                        inputMode="numeric"
+                        placeholder="Mín."
+                        aria-label={`Idade mínima da categoria ${index + 1}`}
+                        value={row.minAge}
+                        onChange={(e) =>
+                          updateRow(row.key, {
+                            minAge: ageDigits(e.target.value),
+                          })
+                        }
+                        required
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupText>anos</InputGroupText>
+                      </InputGroupAddon>
+                    </InputGroup>
+                    <InputGroup>
+                      <InputGroupInput
+                        name="categoryMax"
+                        inputMode="numeric"
+                        placeholder="Máx."
+                        aria-label={`Idade máxima da categoria ${index + 1}`}
+                        value={row.maxAge}
+                        onChange={(e) =>
+                          updateRow(row.key, {
+                            maxAge: ageDigits(e.target.value),
+                          })
+                        }
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupText>anos</InputGroupText>
+                      </InputGroupAddon>
+                    </InputGroup>
                     <Button
                       type="button"
                       variant="ghost"

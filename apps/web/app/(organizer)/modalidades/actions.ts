@@ -6,13 +6,7 @@ import { z } from "zod"
 
 import { criteriaSchema } from "@/lib/criteria"
 import { errorMessage, type FormState } from "@/lib/form-state"
-import { createClient, getUserId } from "@/lib/supabase/server"
-
-async function requireUser() {
-  const userId = await getUserId()
-  if (!userId) redirect("/entrar")
-  return userId
-}
+import { createClient, requireUser } from "@/lib/supabase/server"
 
 const presetSchema = z.object({
   name: z.string().trim().min(2, "Informe o nome da modalidade"),
