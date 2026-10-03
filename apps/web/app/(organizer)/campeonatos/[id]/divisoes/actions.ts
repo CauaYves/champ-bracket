@@ -4,8 +4,9 @@ import {
   clearResult,
   createSingleElimination,
   getMatches,
-  getPlacements,
   groupAthletes,
+  isBracketComplete,
+  MIN_BRACKET_ATHLETES,
   recordWinner,
   swapEntries,
   totalRounds,
@@ -13,9 +14,13 @@ import {
   type SingleEliminationBracket,
 } from "@workspace/bracket-engine"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 
 import { divisionName, matchLabel, parseBracket, toJson } from "@/lib/bracket"
+import { syncChampionshipStatus } from "@/lib/championship-sync"
 import { criteriaSchema } from "@/lib/criteria"
+import { dbErrorMessage } from "@/lib/db-errors"
+import { setFlash } from "@/lib/flash"
 import { createClient, requireUser } from "@/lib/supabase/server"
 
 /** Result of the division actions, shown as a toast by `ActionButton`. */
@@ -26,9 +31,11 @@ export type ActionResult = {
   confirm?: string[]
 }
 
-function revalidate(championshipId: string, divisionId?: string) {
+/** Syncs the championship status once, then refreshes the affected pages. */
+async function revalidate(championshipId: string, ...divisionIds: string[]) {
+  await syncChampionshipStatus(championshipId)
   revalidatePath(`/campeonatos/${championshipId}`)
-  if (divisionId) {
+  for (const divisionId of divisionIds) {
     revalidatePath(`/campeonatos/${championshipId}/divisoes/${divisionId}`)
   }
 }
@@ -56,7 +63,12 @@ export async function generateDivisions(
     .eq("id", championshipId)
     .single()
   if (!championship) return { error: "Campeonato não encontrado." }
-  if (!["registration_closed", "in_progress"].includes(championship.status)) {
+  // "finished" too: the organizer may still add or fix divisions afterwards.
+  if (
+    !["registration_closed", "in_progress", "finished"].includes(
+      championship.status
+    )
+  ) {
     return { error: "Encerre as inscrições antes de montar as divisões." }
   }
   const criteria = criteriaSchema.safeParse(championship.criteria)
@@ -71,7 +83,7 @@ export async function generateDivisions(
       .is("division_id", null),
     supabase
       .from("divisions")
-      .select("id, group_key, bracket")
+      .select("id, group_key, has_bracket")
       .eq("championship_id", championshipId),
   ])
   if (!athletes?.length) {
@@ -94,7 +106,7 @@ export async function generateDivisions(
   let created = 0
   for (const group of groups) {
     let division = divisions?.find((d) => d.group_key === group.key)
-    if (division?.bracket) {
+    if (division?.has_bracket) {
       // Bracket already drawn: the organizer places latecomers by hand.
       skipped += group.athleteIds.length
       continue
@@ -107,7 +119,7 @@ export async function generateDivisions(
           name: divisionName(group),
           group_key: group.key,
         })
-        .select("id, group_key, bracket")
+        .select("id, group_key, has_bracket")
         .single()
       if (error) {
         console.error("generateDivisions", error)
@@ -122,12 +134,14 @@ export async function generateDivisions(
       .in("id", group.athleteIds)
     if (error) {
       console.error("generateDivisions", error)
-      return { error: "Não foi possível distribuir os atletas." }
+      return {
+        error: dbErrorMessage(error, "Não foi possível distribuir os atletas."),
+      }
     }
     assigned += group.athleteIds.length
   }
 
-  revalidate(championshipId)
+  await revalidate(championshipId)
   const parts = [`${assigned} atleta(s) distribuído(s)`]
   if (created) parts.push(`${created} divisão(ões) criada(s)`)
   if (skipped) {
@@ -152,7 +166,7 @@ export async function createDivision(
     console.error("createDivision", error)
     return { error: "Não foi possível criar a divisão." }
   }
-  revalidate(championshipId)
+  await revalidate(championshipId)
   return { message: "Divisão criada" }
 }
 
@@ -169,8 +183,12 @@ export async function deleteDivision(
     .delete()
     .eq("id", divisionId)
   if (error) return { error: "Não foi possível excluir a divisão." }
-  revalidate(division.championship_id)
-  return { message: "Divisão excluída" }
+
+  // The division page no longer exists: go back to the championship and
+  // confirm there, since a redirect can't return a message.
+  await revalidate(division.championship_id)
+  await setFlash("Divisão excluída")
+  redirect(`/campeonatos/${division.championship_id}`)
 }
 
 export async function moveAthlete(
@@ -193,10 +211,15 @@ export async function moveAthlete(
     .update({ division_id: toDivisionId })
     .eq("id", registrationId)
     .eq("division_id", fromDivisionId)
-  if (error) return { error: "Não foi possível mover o atleta." }
+  if (error) {
+    return { error: dbErrorMessage(error, "Não foi possível mover o atleta.") }
+  }
 
-  revalidate(from.division.championship_id, fromDivisionId)
-  if (toDivisionId) revalidate(from.division.championship_id, toDivisionId)
+  await revalidate(
+    from.division.championship_id,
+    fromDivisionId,
+    ...(toDivisionId ? [toDivisionId] : [])
+  )
   return { message: "Atleta movido" }
 }
 
@@ -223,9 +246,10 @@ export async function setThirdPlaceMatch(
     })
     .eq("id", divisionId)
     .select("id")
-  if (error || !updated.length) return { error: "Não foi possível salvar." }
+  if (error) return { error: dbErrorMessage(error, "Não foi possível salvar.") }
+  if (!updated.length) return { error: "Não foi possível salvar." }
 
-  revalidate(division.championship_id, divisionId)
+  await revalidate(division.championship_id, divisionId)
   return {}
 }
 
@@ -242,8 +266,10 @@ export async function drawBracket(divisionId: string): Promise<ActionResult> {
     .select("id")
     .eq("division_id", divisionId)
     .eq("status", "approved")
-  if (!athletes || athletes.length < 2) {
-    return { error: "A divisão precisa de pelo menos 2 atletas." }
+  if (!athletes || athletes.length < MIN_BRACKET_ATHLETES) {
+    return {
+      error: `A divisão precisa de pelo menos ${MIN_BRACKET_ATHLETES} atletas.`,
+    }
   }
 
   const bracket = createSingleElimination(
@@ -254,9 +280,11 @@ export async function drawBracket(divisionId: string): Promise<ActionResult> {
     .from("divisions")
     .update({ bracket: toJson(bracket) })
     .eq("id", divisionId)
-  if (error) return { error: "Não foi possível sortear a chave." }
+  if (error) {
+    return { error: dbErrorMessage(error, "Não foi possível sortear a chave.") }
+  }
 
-  revalidate(division.championship_id, divisionId)
+  await revalidate(division.championship_id, divisionId)
   return { message: "Chave sorteada" }
 }
 
@@ -274,7 +302,7 @@ export async function discardBracket(
     .eq("id", divisionId)
   if (error) return { error: "Não foi possível descartar a chave." }
 
-  revalidate(division.championship_id, divisionId)
+  await revalidate(division.championship_id, divisionId)
   return { message: "Chave descartada" }
 }
 
@@ -299,9 +327,13 @@ export async function swapBracketSlots(
     .from("divisions")
     .update({ bracket: toJson(swapped) })
     .eq("id", divisionId)
-  if (error) return { error: "Não foi possível trocar os atletas." }
+  if (error) {
+    return {
+      error: dbErrorMessage(error, "Não foi possível trocar os atletas."),
+    }
+  }
 
-  revalidate(division.championship_id, divisionId)
+  await revalidate(division.championship_id, divisionId)
   return {}
 }
 
@@ -319,13 +351,8 @@ export async function startDivision(divisionId: string): Promise<ActionResult> {
     .eq("id", divisionId)
   if (error) return { error: "Não foi possível iniciar as lutas." }
 
-  await supabase
-    .from("championships")
-    .update({ status: "in_progress" })
-    .eq("id", division.championship_id)
-    .eq("status", "registration_closed")
-
-  revalidate(division.championship_id, divisionId)
+  // The championship moves to "Em andamento" through syncChampionshipStatus.
+  await revalidate(division.championship_id, divisionId)
   return { message: "Lutas iniciadas" }
 }
 
@@ -347,7 +374,8 @@ async function saveResultChange(
   }
 
   const { supabase, division } = await loadDivision(divisionId)
-  const finished = getPlacements(change.bracket).gold !== null
+  // Not just the final: a pending 3rd-place match keeps the division open.
+  const finished = isBracketComplete(change.bracket)
   const { error } = await supabase
     .from("divisions")
     .update({
@@ -357,7 +385,7 @@ async function saveResultChange(
     .eq("id", divisionId)
   if (error) return { error: "Não foi possível salvar o resultado." }
 
-  revalidate(division.championship_id, divisionId)
+  await revalidate(division.championship_id, divisionId)
   return {}
 }
 

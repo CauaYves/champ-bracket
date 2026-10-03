@@ -70,6 +70,7 @@ export type Database = {
           format: Database["public"]["Enums"]["bracket_format"]
           group_key: string | null
           group_size: number | null
+          has_bracket: boolean | null
           id: string
           name: string
           status: Database["public"]["Enums"]["division_status"]
@@ -83,6 +84,7 @@ export type Database = {
           format?: Database["public"]["Enums"]["bracket_format"]
           group_key?: string | null
           group_size?: number | null
+          has_bracket?: boolean | null
           id?: string
           name: string
           status?: Database["public"]["Enums"]["division_status"]
@@ -96,6 +98,7 @@ export type Database = {
           format?: Database["public"]["Enums"]["bracket_format"]
           group_key?: string | null
           group_size?: number | null
+          has_bracket?: boolean | null
           id?: string
           name?: string
           status?: Database["public"]["Enums"]["division_status"]

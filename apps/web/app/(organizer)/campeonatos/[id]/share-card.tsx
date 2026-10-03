@@ -1,6 +1,6 @@
 "use client"
 
-import { CopyIcon, ExternalLinkIcon } from "lucide-react"
+import { CopyIcon, ExternalLinkIcon, MonitorIcon } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 
 import { Button } from "@workspace/ui/components/button"
@@ -24,9 +24,12 @@ import { toast } from "@workspace/ui/components/toast"
 export function ShareCard({
   registrationUrl,
   publicUrl,
+  displayUrl,
 }: {
   registrationUrl: string
   publicUrl: string
+  /** Full-screen QR page to leave on a TV/tablet during the event. */
+  displayUrl: string
 }) {
   async function copy() {
     await navigator.clipboard.writeText(registrationUrl)
@@ -61,7 +64,14 @@ export function ShareCard({
           </InputGroup>
         </Field>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-wrap gap-2">
+        <Button
+          render={<a href={displayUrl} target="_blank" rel="noreferrer" />}
+          nativeButton={false}
+        >
+          <MonitorIcon data-icon="inline-start" />
+          Exibir QR Code em outra tela
+        </Button>
         <Button
           variant="outline"
           render={<a href={publicUrl} target="_blank" rel="noreferrer" />}

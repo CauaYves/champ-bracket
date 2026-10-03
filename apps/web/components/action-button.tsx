@@ -19,6 +19,9 @@ import { toast } from "@workspace/ui/components/toast"
 type Result = { error?: string; message?: string }
 
 export function notify(result: Result) {
+  // An action that ends in redirect() resolves without a value; the next
+  // page shows its message instead (see setFlash).
+  if (!result) return
   if (result.error) toast.add({ title: result.error, type: "error" })
   else if (result.message) toast.add({ title: result.message, type: "success" })
 }

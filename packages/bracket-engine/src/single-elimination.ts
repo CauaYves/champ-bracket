@@ -12,6 +12,9 @@ import type {
 
 export const THIRD_PLACE_MATCH_ID: MatchId = "third-place"
 
+/** Fewer athletes than this can't be drawn: they wait for an opponent. */
+export const MIN_BRACKET_ATHLETES = 2
+
 export function mainMatchId(round: number, position: number): MatchId {
   return `r${round}m${position}`
 }
@@ -31,8 +34,10 @@ export function createSingleElimination(
   athletes: readonly AthleteId[],
   options: CreateSingleEliminationOptions = {}
 ): SingleEliminationBracket {
-  if (athletes.length < 2) {
-    throw new RangeError("A bracket needs at least 2 athletes")
+  if (athletes.length < MIN_BRACKET_ATHLETES) {
+    throw new RangeError(
+      `A bracket needs at least ${MIN_BRACKET_ATHLETES} athletes`
+    )
   }
   if (new Set(athletes).size !== athletes.length) {
     throw new Error("Duplicate athlete ids")
@@ -153,6 +158,16 @@ export function getPlacements(bracket: SingleEliminationBracket): Placements {
     silver: final?.status === "done" ? final.loserId : null,
     bronze,
   }
+}
+
+/**
+ * Whether every match is decided (fought or resolved by a bye), including the
+ * 3rd-place match. A champion alone isn't enough: bronze may still be pending.
+ */
+export function isBracketComplete(bracket: SingleEliminationBracket): boolean {
+  return getMatches(bracket).every(
+    (m) => m.status === "done" || m.status === "bye"
+  )
 }
 
 const BYE: Slot = { type: "bye" }

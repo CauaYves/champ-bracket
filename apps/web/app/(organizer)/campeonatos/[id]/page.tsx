@@ -1,4 +1,3 @@
-import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 
 import { competitionAge } from "@workspace/bracket-engine"
@@ -40,9 +39,16 @@ import {
   registrationStatusLabel,
 } from "@/lib/labels"
 import type { Enums, Tables } from "@/lib/supabase/database.types"
+import { ActionButton } from "@/components/action-button"
 import { PageBreadcrumb } from "@/components/page-breadcrumb"
 import { formatPhone, formatWeight } from "@/lib/format"
 import { createClient } from "@/lib/supabase/server"
+import {
+  getOrigin,
+  publicChampionshipUrl,
+  qrDisplayPath,
+  registrationUrl,
+} from "@/lib/url"
 
 import { setRegistrationStatus, updateChampionshipStatus } from "../actions"
 import { DivisionsCard } from "./divisions-card"
@@ -64,13 +70,6 @@ const statusActions: Partial<
   registration_closed: { label: "Reabrir inscrições", to: "registration_open" },
 }
 
-async function getOrigin() {
-  const h = await headers()
-  const host = h.get("x-forwarded-host") ?? h.get("host")
-  const proto = h.get("x-forwarded-proto") ?? "http"
-  return `${proto}://${host}`
-}
-
 export default async function ChampionshipPage({
   params,
 }: PageProps<"/campeonatos/[id]">) {
@@ -87,14 +86,19 @@ export default async function ChampionshipPage({
         .order("created_at"),
       supabase
         .from("divisions")
-        .select("id, name, status")
+        .select("id, name, status, has_bracket")
         .eq("championship_id", id)
         .order("name"),
     ])
   if (!championship) notFound()
 
+  // Athletes in these divisions are part of a drawn bracket: they stay.
+  const drawnDivisionIds = new Set(
+    (divisions ?? []).filter((d) => d.has_bracket).map((d) => d.id)
+  )
+
   const origin = await getOrigin()
-  const publicUrl = `${origin}/c/${championship.public_slug}`
+  const publicUrl = publicChampionshipUrl(origin, championship.public_slug)
   const statusAction = statusActions[championship.status]
   const eventYear = Number(championship.event_date.slice(0, 4))
 
@@ -136,8 +140,9 @@ export default async function ChampionshipPage({
 
       {championship.status !== "draft" && (
         <ShareCard
-          registrationUrl={`${publicUrl}/inscricao`}
+          registrationUrl={registrationUrl(origin, championship.public_slug)}
           publicUrl={publicUrl}
+          displayUrl={qrDisplayPath(championship.public_slug)}
         />
       )}
 
@@ -152,7 +157,8 @@ export default async function ChampionshipPage({
         <CardHeader>
           <CardTitle>Atletas inscritos</CardTitle>
           <CardDescription>
-            Aprove as inscrições para que os atletas entrem nas chaves.
+            Aprove as inscrições para que os atletas entrem nas chaves. Atletas
+            que já estão em uma chave sorteada não podem ser recusados.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -170,6 +176,7 @@ export default async function ChampionshipPage({
                   championshipId={championship.id}
                   registrations={byStatus(status)}
                   eventYear={eventYear}
+                  drawnDivisionIds={drawnDivisionIds}
                 />
               </TabsContent>
             ))}
@@ -184,10 +191,13 @@ function RegistrationsTable({
   championshipId,
   registrations,
   eventYear,
+  drawnDivisionIds,
 }: {
   championshipId: string
   registrations: Tables<"registrations">[]
   eventYear: number
+  /** Divisions with a drawn bracket; their athletes can't be rejected. */
+  drawnDivisionIds: Set<string>
 }) {
   if (registrations.length === 0) {
     return (
@@ -244,7 +254,8 @@ function RegistrationsTable({
             <TableCell>
               <div className="flex justify-end gap-2">
                 {registration.status !== "approved" && (
-                  <form
+                  <ActionButton
+                    size="sm"
                     action={setRegistrationStatus.bind(
                       null,
                       championshipId,
@@ -252,24 +263,27 @@ function RegistrationsTable({
                       "approved"
                     )}
                   >
-                    <Button type="submit" size="sm">
-                      Aprovar
-                    </Button>
-                  </form>
+                    Aprovar
+                  </ActionButton>
                 )}
-                {registration.status !== "rejected" && (
-                  <form
-                    action={setRegistrationStatus.bind(
-                      null,
-                      championshipId,
-                      registration.id,
-                      "rejected"
-                    )}
-                  >
-                    <Button type="submit" size="sm" variant="outline">
+                {registration.division_id &&
+                drawnDivisionIds.has(registration.division_id) ? (
+                  <Badge variant="outline">Na chave</Badge>
+                ) : (
+                  registration.status !== "rejected" && (
+                    <ActionButton
+                      size="sm"
+                      variant="outline"
+                      action={setRegistrationStatus.bind(
+                        null,
+                        championshipId,
+                        registration.id,
+                        "rejected"
+                      )}
+                    >
                       Recusar
-                    </Button>
-                  </form>
+                    </ActionButton>
+                  )
                 )}
               </div>
             </TableCell>

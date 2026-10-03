@@ -44,9 +44,12 @@ export function DivisionsCard({
   divisions: Pick<Tables<"divisions">, "id" | "name" | "status">[]
   approved: Pick<Tables<"registrations">, "division_id">[]
 }) {
-  const canOrganize = ["registration_closed", "in_progress"].includes(
-    championshipStatus
-  )
+  // Also when finished: adding or fixing a division reopens the championship.
+  const canOrganize = [
+    "registration_closed",
+    "in_progress",
+    "finished",
+  ].includes(championshipStatus)
   const unassigned = approved.filter((r) => !r.division_id).length
   const countIn = (divisionId: string) =>
     approved.filter((r) => r.division_id === divisionId).length
