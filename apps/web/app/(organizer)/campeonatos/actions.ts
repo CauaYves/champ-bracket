@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 
+import { syncChampionshipStatus } from "@/lib/championship-sync"
 import { criteriaSchema } from "@/lib/criteria"
+import { dbErrorMessage } from "@/lib/db-errors"
 import { errorMessage, type FormState } from "@/lib/form-state"
 import type { Enums } from "@/lib/supabase/database.types"
 import { createClient, requireUser } from "@/lib/supabase/server"
@@ -102,21 +104,12 @@ export async function setRegistrationStatus(
   championshipId: string,
   registrationId: string,
   status: Enums<"registration_status">
-) {
+): Promise<{ error?: string; message?: string }> {
   await requireUser()
   const supabase = await createClient()
 
-  if (status !== "approved") {
-    const { data: registration } = await supabase
-      .from("registrations")
-      .select("divisions(bracket)")
-      .eq("id", registrationId)
-      .single()
-    if (registration?.divisions?.bracket) {
-      throw new Error("O atleta já está em uma chave sorteada")
-    }
-  }
-
+  // Athletes in a drawn bracket can't be rejected: the UI hides the button and
+  // a DB trigger enforces it atomically (registrations_protect_drawn_bracket).
   const { error } = await supabase
     .from("registrations")
     // Only approved athletes stay in divisions.
@@ -124,9 +117,17 @@ export async function setRegistrationStatus(
     .eq("id", registrationId)
     .eq("championship_id", championshipId)
   if (error) {
-    console.error(error)
-    throw new Error("Não foi possível atualizar a inscrição")
+    console.error("setRegistrationStatus", error)
+    return {
+      error: dbErrorMessage(error, "Não foi possível atualizar a inscrição."),
+    }
   }
 
+  // A newly approved athlete has no division yet: the event isn't over.
+  await syncChampionshipStatus(championshipId)
   revalidatePath(`/campeonatos/${championshipId}`)
+  return {
+    message:
+      status === "approved" ? "Inscrição aprovada" : "Inscrição recusada",
+  }
 }

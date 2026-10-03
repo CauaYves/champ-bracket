@@ -7,6 +7,7 @@ import {
   getMatch,
   getMatches,
   getPlacements,
+  isBracketComplete,
   mainMatchId,
   recordWinner,
   swapEntries,
@@ -220,5 +221,27 @@ describe("getPlacements", () => {
       silver: "A",
       bronze: [],
     })
+  })
+})
+
+describe("isBracketComplete", () => {
+  it("waits for the 3rd-place match even after the final", () => {
+    let bracket = draw(["A", "B", "C", "D"], true)
+    bracket = win(bracket, mainMatchId(1, 0), "A")
+    bracket = win(bracket, mainMatchId(1, 1), "B")
+    bracket = win(bracket, mainMatchId(2, 0), "A")
+    expect(getPlacements(bracket).gold).toBe("A")
+    expect(isBracketComplete(bracket)).toBe(false)
+
+    bracket = win(bracket, THIRD_PLACE_MATCH_ID, "C")
+    expect(isBracketComplete(bracket)).toBe(true)
+  })
+
+  it("counts bye matches as decided", () => {
+    let bracket = draw(["A", "B", "C"])
+    expect(isBracketComplete(bracket)).toBe(false)
+    bracket = win(bracket, mainMatchId(1, 1), "B")
+    bracket = win(bracket, mainMatchId(2, 0), "A")
+    expect(isBracketComplete(bracket)).toBe(true)
   })
 })

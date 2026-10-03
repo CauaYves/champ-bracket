@@ -47,11 +47,13 @@ pnpm --filter @workspace/bracket-engine exec vitest run -t "cascades"   # single
 - `lib/supabase/database.types.ts` is the `Database` type; regenerate it after schema changes.
 - This Supabase project does **not** auto-grant new `public` tables to the API roles. Every new table needs explicit `grant ... to authenticated` in its migration (see `20260926010000_grants.sql`), in addition to RLS policies. "permission denied for table X" means a missing grant, not an RLS problem.
 - Organizers access their own rows via RLS (`owner_id = auth.uid()`). Public pages (`/c/[slug]`) and the QR registration form only use `security definer` RPCs, never direct table reads. Registration athlete data is immutable (DB trigger); only `status`/`division_id` change.
+- `divisions.has_bracket` is a generated column: select it instead of the `bracket` JSON when you only need "is drawn". DB triggers guard bracket integrity; map their errors with `dbErrorMessage()` (`lib/db-errors.ts`).
+- Server Actions that `redirect()` can't return a toast message: call `setFlash(message)` (`lib/flash.ts`) before redirecting.
 - Server Actions re-check auth (`requireUser()`) and validate with zod; forms use `useActionState` with the `FormState` shape in `lib/form-state.ts`.
 
 ### UI rule
 
-Use stock shadcn components only. **Before building any UI piece, check the registry** (`pnpm dlx shadcn@latest list @shadcn -c apps/web` / `search`). If a component exists, install it and use it instead of raw markup. Examples: `Empty` for empty and success states, `Item` for list rows, `InputGroup` for input + button, `toast` (Base UI) for feedback, `Breadcrumb` via `components/page-breadcrumb.tsx`. Don't edit `packages/ui/src/components/*`, and don't add custom colors, typography or decorative classes. `className` is for layout only (flex/grid/gap/padding/width). UI copy is pt-BR. The only non-shadcn UI is the QR code (`qrcode.react`), because the registry has none.
+Use stock shadcn components only. **Before building any UI piece, check the registry** (`pnpm dlx shadcn@latest list @shadcn -c apps/web` / `search`). If a component exists, install it and use it instead of raw markup. Examples: `Empty` for empty and success states, `Item` for list rows, `InputGroup` for input + button, `toast` (Base UI) for feedback, `Breadcrumb` via `components/page-breadcrumb.tsx`. Don't edit `packages/ui/src/components/*` (Prettier skips them via `packages/ui/.prettierignore`), and don't add custom colors, typography or decorative classes. `className` is for layout only (flex/grid/gap/padding/width). UI copy is pt-BR. The only non-shadcn UI is the QR code (`qrcode.react`), because the registry has none.
 
 Organizer routes live in the `app/(organizer)/` route group (shared nav layout). Add new protected prefixes to `PROTECTED_PREFIXES` in `lib/supabase/proxy.ts`.
 
@@ -64,7 +66,7 @@ Organizer routes live in the `app/(organizer)/` route group (shared nav layout).
 ### Styling
 
 - Tailwind CSS v4, configured CSS-first in `packages/ui/src/styles/globals.css` (no `tailwind.config`). Theme tokens are oklch CSS variables in `:root` / `.dark`. `@source` directives there scan `apps/**`, so new app directories are picked up automatically.
-- The root layout imports `@workspace/ui/globals.css` and sets font CSS variables (`--font-sans` Noto Sans, `--font-heading` Playfair Display, `--font-mono` Geist Mono).
+- The root layout imports `@workspace/ui/globals.css` and sets font CSS variables (`--font-sans` Kanit, `--font-heading` Oswald, `--font-mono` Geist Mono).
 - Dark mode uses `next-themes` with the `class` attribute. `apps/web/components/theme-provider.tsx` also binds the `d` key to toggle the theme when focus is not in a text input.
 
 ### Formatting conventions

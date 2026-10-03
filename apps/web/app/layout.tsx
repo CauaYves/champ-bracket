@@ -1,17 +1,27 @@
 import type { Metadata } from "next"
-import { Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google"
+import { Geist_Mono, Kanit, Oswald } from "next/font/google"
 
 import "@workspace/ui/globals.css"
+import { FlashToast } from "@/components/flash-toast"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@workspace/ui/components/toast"
 import { cn } from "@workspace/ui/lib/utils"
 
-const playfairDisplayHeading = Playfair_Display({
-  subsets: ["latin"],
+// Titles (CardTitle, EmptyTitle, AlertDialogTitle: semibold, uppercase).
+// Condensed fight-poster look; variable font, so the 600 weight is real.
+const oswald = Oswald({
+  subsets: ["latin", "latin-ext"],
   variable: "--font-heading",
 })
 
-const notoSans = Noto_Sans({ subsets: ["latin"], variable: "--font-sans" })
+// Body text. Kanit (Cadson Demak) has the straight, sturdy look of Muay Thai
+// and fight-event posters and stays readable at form/table sizes.
+// Not a variable font: load every weight the shadcn components use.
+const kanit = Kanit({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+})
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -36,13 +46,16 @@ export default function RootLayout({
         "antialiased",
         fontMono.variable,
         "font-sans",
-        notoSans.variable,
-        playfairDisplayHeading.variable
+        kanit.variable,
+        oswald.variable
       )}
     >
       <body>
         <ThemeProvider>
-          <Toaster>{children}</Toaster>
+          <Toaster>
+            <FlashToast />
+            {children}
+          </Toaster>
         </ThemeProvider>
       </body>
     </html>

@@ -1,4 +1,4 @@
-import { PlusIcon, TrophyIcon } from "lucide-react"
+import { ChevronRightIcon, PlusIcon, TrophyIcon } from "lucide-react"
 import Link from "next/link"
 
 import { Badge } from "@workspace/ui/components/badge"
@@ -20,13 +20,13 @@ import {
   EmptyTitle,
 } from "@workspace/ui/components/empty"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@workspace/ui/components/table"
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@workspace/ui/components/item"
 
 import { championshipStatusLabel, formatDate } from "@/lib/labels"
 import { createClient } from "@/lib/supabase/server"
@@ -78,34 +78,29 @@ export default async function ChampionshipsPage() {
         </CardAction>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Data</TableHead>
-              <TableHead>Local</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {championships.map((championship) => (
-              <TableRow key={championship.id}>
-                <TableCell>
-                  <Link href={`/campeonatos/${championship.id}`}>
-                    {championship.name}
-                  </Link>
-                </TableCell>
-                <TableCell>{formatDate(championship.event_date)}</TableCell>
-                <TableCell>{championship.location}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {championshipStatusLabel[championship.status]}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <ItemGroup>
+          {championships.map((championship) => (
+            <Item
+              key={championship.id}
+              variant="outline"
+              render={<Link href={`/campeonatos/${championship.id}`} />}
+            >
+              <ItemContent>
+                <ItemTitle>{championship.name}</ItemTitle>
+                <ItemDescription>
+                  {formatDate(championship.event_date)} ·{" "}
+                  {championship.location}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge variant="secondary">
+                  {championshipStatusLabel[championship.status]}
+                </Badge>
+                <ChevronRightIcon />
+              </ItemActions>
+            </Item>
+          ))}
+        </ItemGroup>
       </CardContent>
     </Card>
   )
